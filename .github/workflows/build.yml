@@ -1,0 +1,50 @@
+name: Build
+
+on: push
+
+jobs:
+  convert_via_pandoc:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Print output
+        uses: docker://pandoc/latex:2.12
+        with:
+          args: >-
+            content/index.md
+            --resource-path=content
+            --citeproc
+            --csl=assets/citation-style.csl
+            --from=markdown+tex_math_single_backslash+tex_math_dollars+raw_tex
+            --to=latex
+            --output=output_print.pdf
+            --pdf-engine=xelatex
+            --include-in-header=layouts/print.tex
+      - name: Ereader output
+        uses: docker://pandoc/latex:2.12
+        with:
+          args: >-
+            content/index.md
+            --resource-path=content
+            --citeproc
+            --csl=assets/citation-style.csl
+            --from=markdown+tex_math_single_backslash+tex_math_dollars+raw_tex
+            --to=latex
+            --output=output_ereader.pdf
+            --pdf-engine=xelatex
+            --include-in-header=layouts/ereader.tex
+      - uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: |
+            output_print.pdf
+            output_ereader.pdf
+      - name: release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            output_print.pdf
+            output_ereader.pdf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
